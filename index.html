@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKX Wallet - 签名工具集</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --accent: #00ff88;
+            --accent-dim: #00ff8833;
+            --accent-purple: #a855f7;
+            --accent-purple-dim: #a855f733;
+            --accent-orange: #f97316;
+            --accent-orange-dim: #f9731633;
+            --accent-blue: #3b82f6;
+            --accent-blue-dim: #3b82f633;
+            --text-primary: #ffffff;
+            --text-secondary: #8b8b9e;
+            --border: #2a2a3a;
+            --error: #ff4757;
+            --success: #00ff88;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(ellipse at 20% 30%, var(--accent-dim) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(100, 50, 255, 0.1) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(5deg); }
+            66% { transform: translate(-20px, 20px) rotate(-5deg); }
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 60px 60px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent), #00cc6a);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--bg-primary);
+            box-shadow: 0 0 30px var(--accent-dim);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.8s ease-out;
+            animation-fill-mode: backwards;
+        }
+
+        .card:nth-child(2) { animation-delay: 0.1s; }
+        .card:nth-child(3) { animation-delay: 0.2s; }
+        .card:nth-child(4) { animation-delay: 0.3s; }
+        .card:nth-child(5) { animation-delay: 0.4s; }
+        .card:nth-child(6) { animation-delay: 0.5s; }
+        .card:nth-child(7) { animation-delay: 0.6s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-dim);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .card-icon.purple {
+            background: var(--accent-purple-dim);
+        }
+
+        .card-icon.orange {
+            background: var(--accent-orange-dim);
+        }
+
+        .card-icon.blue {
+            background: var(--accent-blue-dim);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .method-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: auto;
+        }
+
+        .status-badge.disconnected {
+            background: rgba(255, 71, 87, 0.15);
+            color: var(--error);
+        }
+
+        .status-badge.connected {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--success);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #00cc6a);
+            color: var(--bg-primary);
+            box-shadow: 0 4px 20px var(--accent-dim);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px var(--accent-dim);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-purple {
+            background: linear-gradient(135deg, var(--accent-purple), #9333ea);
+            color: white;
+            box-shadow: 0 4px 20px var(--accent-purple-dim);
+        }
+
+        .btn-purple:hover {
+            box-shadow: 0 6px 30px var(--accent-purple-dim);
+        }
+
+        .btn-orange {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            box-shadow: 0 4px 20px var(--accent-orange-dim);
+        }
+
+        .btn-orange:hover {
+            box-shadow: 0 6px 30px var(--accent-orange-dim);
+        }
+
+        .btn-blue {
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+            color: white;
+            box-shadow: 0 4px 20px var(--accent-blue-dim);
+        }
+
+        .btn-blue:hover {
+            box-shadow: 0 6px 30px var(--accent-blue-dim);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .wallet-info {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .wallet-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .wallet-info-row:not(:last-child) {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .wallet-info-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .wallet-info-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent);
+        }
+
+        .typed-data-preview {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid var(--border);
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .typed-data-preview pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .typed-data-preview .key {
+            color: var(--accent);
+        }
+
+        .typed-data-preview .string {
+            color: #f9a825;
+        }
+
+        .typed-data-preview .number {
+            color: #e91e63;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        textarea.form-input {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .result-box {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .result-box.success {
+            border-color: var(--success);
+        }
+
+        .result-box.error {
+            border-color: var(--error);
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .result-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+            line-height: 1.6;
+        }
+
+        .result-value.success {
+            color: var(--success);
+        }
+
+        .result-value.error {
+            color: var(--error);
+        }
+
+        .copy-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 12px;
+        }
+
+        .copy-btn:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+
+        .loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--bg-primary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .method-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .method-description.purple {
+            border-left-color: var(--accent-purple);
+        }
+
+        .method-description.orange {
+            border-left-color: var(--accent-orange);
+        }
+
+        .method-description.blue {
+            border-left-color: var(--accent-blue);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .card-header {
+                flex-wrap: wrap;
+            }
+
+            .status-badge {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+
+            .wallet-info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    <div class="grid-overlay"></div>
+
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+            </div>
+            <h1>OKX Wallet Signer</h1>
+            <p class="subtitle">连接 OKX 钱包 · 多种签名方法支持</p>
+        </header>
+
+        <!-- Connect Wallet Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">🔗</div>
+                <span class="card-title">钱包连接</span>
+                <div id="statusBadge" class="status-badge disconnected">
+                    <span class="status-dot"></span>
+                    <span id="statusText">未连接</span>
+                </div>
+            </div>
+
+            <div id="connectSection">
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    点击下方按钮连接你的 OKX 钱包，开始进行签名操作。
+                </p>
+                <button id="connectBtn" class="btn btn-primary" onclick="connectWallet()">
+                    <span>🦊</span>
+                    <span>连接 OKX 钱包</span>
+                </button>
+            </div>
+
+            <div id="walletInfo" class="wallet-info hidden">
+                <div class="wallet-info-row">
+                    <span class="wallet-info-label">钱包地址</span>
+                    <span id="walletAddress" class="wallet-info-value">-</span>
+                </div>
+                <div class="wallet-info-row">
+                    <span class="wallet-info-label">链 ID</span>
+                    <span id="chainId" class="wallet-info-value">-</span>
+                </div>
+                <div class="wallet-info-row">
+                    <span class="wallet-info-label">网络</span>
+                    <span id="networkName" class="wallet-info-value">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Personal Sign Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon purple">🔏</div>
+                <span class="card-title">Personal Sign</span>
+                <span class="method-badge">personal_sign</span>
+            </div>
+
+            <div class="method-description purple">
+                💡 <strong>personal_sign</strong> 是最简单的消息签名方法，用于签署纯文本消息。签名前会自动添加 "\x19Ethereum Signed Message:\n" 前缀，防止恶意 DApp 签署交易。
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">签名消息</label>
+                <textarea id="personalSignMessage" class="form-input" placeholder="输入要签名的消息...">Hello, OKX Wallet! This is a test message for personal_sign.</textarea>
+            </div>
+
+            <button id="personalSignBtn" class="btn btn-purple" onclick="personalSign()" disabled>
+                <span>🔐</span>
+                <span>执行 Personal Sign</span>
+            </button>
+
+            <div id="personalSignResult" class="result-box hidden">
+                <div class="result-label">签名结果</div>
+                <div id="personalSignResultValue" class="result-value"></div>
+                <button class="copy-btn" onclick="copyResult('personalSignResultValue')">
+                    <span>📋</span>
+                    <span>复制签名</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SignTypedData V4 Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">✍️</div>
+                <span class="card-title">SignTypedData V4</span>
+                <span class="method-badge">eth_signTypedData_v4</span>
+            </div>
+
+            <div class="method-description">
+                💡 <strong>eth_signTypedData_v4</strong> 是 EIP-712 的最新版本，支持嵌套结构体数组、递归类型和完善的类型编码。这是目前最推荐使用的结构化数据签名方法。
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">签名数据 (JSON 格式)</label>
+                <textarea id="typedDataV4Input" class="form-input" placeholder="输入 EIP-712 TypedData JSON..."></textarea>
+            </div>
+
+            <div class="typed-data-preview">
+                <pre id="typedDataV4Preview"></pre>
+            </div>
+
+            <button id="signV4Btn" class="btn btn-primary" onclick="signTypedDataV4()" disabled>
+                <span>🔐</span>
+                <span>执行 SignTypedData V4</span>
+            </button>
+
+            <div id="signV4Result" class="result-box hidden">
+                <div class="result-label">签名结果</div>
+                <div id="signV4ResultValue" class="result-value"></div>
+                <button class="copy-btn" onclick="copyResult('signV4ResultValue')">
+                    <span>📋</span>
+                    <span>复制签名</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SignTypedData V3 Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon orange">📝</div>
+                <span class="card-title">SignTypedData V3</span>
+                <span class="method-badge">eth_signTypedData_v3</span>
+            </div>
+
+            <div class="method-description orange">
+                💡 <strong>eth_signTypedData_v3</strong> 是 EIP-712 的第三版，与 V4 相比，它不支持数组作为结构体字段。适用于一些旧版协议的兼容场景。
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">签名数据 (JSON 格式)</label>
+                <textarea id="typedDataV3Input" class="form-input" placeholder="输入 EIP-712 TypedData JSON..."></textarea>
+            </div>
+
+            <div class="typed-data-preview">
+                <pre id="typedDataV3Preview"></pre>
+            </div>
+
+            <button id="signV3Btn" class="btn btn-orange" onclick="signTypedDataV3()" disabled>
+                <span>🔐</span>
+                <span>执行 SignTypedData V3</span>
+            </button>
+
+            <div id="signV3Result" class="result-box hidden">
+                <div class="result-label">签名结果</div>
+                <div id="signV3ResultValue" class="result-value"></div>
+                <button class="copy-btn" onclick="copyResult('signV3ResultValue')">
+                    <span>📋</span>
+                    <span>复制签名</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SignTypedData (Legacy) Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon blue">📜</div>
+                <span class="card-title">SignTypedData (Legacy)</span>
+                <span class="method-badge">eth_signTypedData</span>
+            </div>
+
+            <div class="method-description blue">
+                💡 <strong>eth_signTypedData</strong> 是最早的类型化数据签名方法（也称为 V1），使用简单的类型数组格式。主要用于向后兼容，新项目建议使用 V4 版本。
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">签名数据 (JSON 数组格式)</label>
+                <textarea id="typedDataLegacyInput" class="form-input" placeholder="输入 TypedData 数组 JSON..."></textarea>
+            </div>
+
+            <div class="typed-data-preview">
+                <pre id="typedDataLegacyPreview"></pre>
+            </div>
+
+            <button id="signLegacyBtn" class="btn btn-blue" onclick="signTypedDataLegacy()" disabled>
+                <span>🔐</span>
+                <span>执行 SignTypedData</span>
+            </button>
+
+            <div id="signLegacyResult" class="result-box hidden">
+                <div class="result-label">签名结果</div>
+                <div id="signLegacyResultValue" class="result-value"></div>
+                <button class="copy-btn" onclick="copyResult('signLegacyResultValue')">
+                    <span>📋</span>
+                    <span>复制签名</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">📚</div>
+                <span class="card-title">签名方法对比</span>
+            </div>
+            <div style="color: var(--text-secondary); line-height: 1.8;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                            <th style="padding: 12px 8px; color: var(--text-primary);">方法</th>
+                            <th style="padding: 12px 8px; color: var(--text-primary);">用途</th>
+                            <th style="padding: 12px 8px; color: var(--text-primary);">推荐度</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px 8px; font-family: 'JetBrains Mono', monospace; color: var(--accent-purple);">personal_sign</td>
+                            <td style="padding: 12px 8px;">纯文本消息签名</td>
+                            <td style="padding: 12px 8px;">⭐⭐⭐⭐⭐</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px 8px; font-family: 'JetBrains Mono', monospace; color: var(--accent);">eth_signTypedData_v4</td>
+                            <td style="padding: 12px 8px;">结构化数据签名（最新）</td>
+                            <td style="padding: 12px 8px;">⭐⭐⭐⭐⭐</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px 8px; font-family: 'JetBrains Mono', monospace; color: var(--accent-orange);">eth_signTypedData_v3</td>
+                            <td style="padding: 12px 8px;">结构化数据签名（旧版兼容）</td>
+                            <td style="padding: 12px 8px;">⭐⭐⭐</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px 8px; font-family: 'JetBrains Mono', monospace; color: var(--accent-blue);">eth_signTypedData</td>
+                            <td style="padding: 12px 8px;">简单类型数据签名（遗留）</td>
+                            <td style="padding: 12px 8px;">⭐⭐</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            <p>Built with ❤️ for Web3 developers</p>
+            <p style="margin-top: 8px;">
+                <a href="https://www.okx.com/web3" target="_blank">OKX Web3</a> · 
+                <a href="https://eips.ethereum.org/EIPS/eip-712" target="_blank">EIP-712 Spec</a> ·
+                <a href="https://eips.ethereum.org/EIPS/eip-191" target="_blank">EIP-191 Spec</a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
